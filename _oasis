@@ -1,0 +1,17 @@
+Name: SecureLoggingLib
+Version: 0.1
+Synopsis: A library for tamper resistant logging.
+Authors: Daniel Spencer <daniel.ds.spencer@gmail.com>
+License: PROP
+
+Description: Library implementing a hash chaining logging system that is secure and tamper resistant.
+
+OASISFormat: 0.4
+BuildTools: ocamlbuild
+Plugins: META (0.4), DevFiles (0.4)
+
+Executable "main"
+  Path: src
+  MainIs: main.ml
+  CompiledObject: native
+  BuildDepends: nocrypto

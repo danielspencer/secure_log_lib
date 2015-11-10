@@ -1,0 +1,8 @@
+~
+\#*
+.#*
+_build/
+setup.data
+setup.log
+main.native
+_tests
