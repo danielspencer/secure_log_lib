@@ -10,25 +10,19 @@ OASISFormat: 0.4
 BuildTools: ocamlbuild
 Plugins: META (0.4), DevFiles (0.4)
 
-Executable "main"
-  Path: src
-  MainIs: main.ml
-  CompiledObject: native
-  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax
-
 Library "secure_log_lib"
   Path: src
-  Modules: Main
-  BuildDepends: nocrypto, cstruct
+  Modules: Log
+  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax
 
-Executable "test_main"
+Executable "test_log"
   Path: test
-  MainIs: test_main.ml
+  MainIs: test_log.ml
   CompiledObject: native
   Install: false
   BuildDepends: oUnit, secure_log_lib
 
-Test "test_main"
-  TestTools: test_main
-  Command: $test_main
+Test "test_log"
+  TestTools: test_log
+  Command: $test_log
   WorkingDirectory: test

@@ -14,4 +14,4 @@ install: ["ocaml" "setup.ml" "-install"]
 remove: [
   ["ocamlfind" "remove" "secure_log_lib"]
 ]
-depends: ["ocamlfind" "nocrypto" "cstruct"]
+depends: ["ocamlfind" "nocrypto" "cstruct" "sexplib"]
