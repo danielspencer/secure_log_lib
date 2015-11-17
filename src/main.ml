@@ -1,10 +1,9 @@
 open Nocrypto
+open Sexplib.Std
 
-let () = print_string "Hello world!\n"
+type key = Cstruct.t with sexp
 
-type key = Cstruct.t
-
-type entry_type = Cstruct.t
+type entry_type = Cstruct.t with sexp
 
 let hash_algo = `SHA256
 module Cipher = Cipher_block.AES.CBC
@@ -15,12 +14,12 @@ type entry =
   ; cipher_text : Cstruct.t
   ; hash        : Cstruct.t
   ; hash_mac    : Cstruct.t
-  }
+  } with sexp
 
 type log =
   { key     : key
   ; entries : entry list
-  }
+  } with sexp
 
 let previous_hash log =
   match log.entries with
@@ -74,23 +73,8 @@ let decrypt entry key =
   let iv = Cstruct.create (Cipher.block_size) in
   Cipher.decrypt ~key:encryption_key ~iv entry.cipher_text
 
-let () =
-  Printf.printf "Cipher block: %i\n" Cipher.block_size
+let new_log key =
+  {key; entries=[]}
 
-let () =
-  let key = Cstruct.of_string "key" in
-  let entry_type = Cstruct.create 1 in
-  let empty = {key; entries=[]} in
-  let str = "data data dataaa" in
-  let data = (Cstruct.of_string str) in
-  let one_entry =
-    append entry_type data empty
-  in
-  let decrypted =
-    decrypt (List.hd one_entry.entries) key
-    |> Cstruct.to_string
-  in
-  if not (decrypted = str) then
-    failwith (Printf.sprintf "Strings don't match: %s\n%s\n" str decrypted)
-  else
-    print_string "Strings matched"
+let get_entries log =
+  log.entries

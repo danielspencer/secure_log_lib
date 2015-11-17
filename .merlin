@@ -1,0 +1,6 @@
+PKG cstruct nocrypto
+S src
+S test
+B _build/src
+B _build/test
+

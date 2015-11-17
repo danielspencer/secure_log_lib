@@ -1,0 +1,17 @@
+opam-version: "1.2"
+version: "0.1"
+name: "secure_log_lib"
+maintainer: "Daniel Spencer <daniel.ds.spencer@gmail.com>"
+author: "Daniel Spencer <daniel.ds.spencer@gmail.com>"
+homepage: "github.com/danielspencer"
+bug-reports: "github.com/danielspencer"
+license: "Proprietary"
+build: [
+  ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
+  ["ocaml" "setup.ml" "-build"]
+]
+install: ["ocaml" "setup.ml" "-install"]
+remove: [
+  ["ocamlfind" "remove" "secure_log_lib"]
+]
+depends: ["ocamlfind" "nocrypto" "cstruct"]
