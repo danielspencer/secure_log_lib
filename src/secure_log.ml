@@ -114,6 +114,9 @@ let decrypt entry key =
 let new_log key =
   {key; entries=[]}
 
+let reconstruct key entries =
+  {key; entries}
+
 let get_entries log =
   log.entries
 
@@ -124,7 +127,7 @@ let get_entry log key n =
   let key' = nth_key key n in
   decrypt entry key'
 
-let validate log =
+let validate entries =
   let rec loop = function
     | [] -> ()
     | entry :: tail ->
@@ -133,10 +136,10 @@ let validate log =
       assert (Cstruct.equal expected entry.hash);
       loop tail
   in
-  loop log.entries
+  loop entries
 
 let validate_macs log key =
-  let entries = List.rev log.entries in
+  let entries = log.entries in
   let rec loop key = function
     | [] -> ()
     | entry :: tail ->
@@ -144,4 +147,4 @@ let validate_macs log key =
       assert (Cstruct.equal entry.hash_mac expected);
       loop (next_key key) tail
   in
-  loop key entries
+  loop key (List.rev entries)

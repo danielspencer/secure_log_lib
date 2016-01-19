@@ -113,7 +113,10 @@ let test_validate _ =
       empty
       strs
   in
-  validate log;
+  let entries =
+    get_entries log
+  in
+  validate entries;
   validate_macs log key
 
 
