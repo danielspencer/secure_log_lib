@@ -1,6 +1,4 @@
 
-val root : string
-
 module Opaque :
 functor
   (Store : Irmin.RW with type key = string list and type value = string) ->
