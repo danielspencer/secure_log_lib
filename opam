@@ -14,4 +14,10 @@ install: ["ocaml" "setup.ml" "-install"]
 remove: [
   ["ocamlfind" "remove" "secure_log_lib"]
 ]
-depends: ["ocamlfind" "nocrypto" "cstruct" "sexplib"]
+depends: [
+"irmin" {<= "0.9.9"}
+"ocamlfind" 
+"nocrypto" 
+"cstruct" 
+"sexplib"
+]

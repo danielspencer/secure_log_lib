@@ -5,7 +5,7 @@ module Cipher = Cipher_block.AES.CBC
 let hash_algo = `SHA256
 
 let test_pad _ =
-  let open Log in
+  let open Secure_log in
   let str = "data data dataaaaaa" |> Cstruct.of_string in
   let block_size = 16 in
   let pad_cycled =
@@ -14,7 +14,7 @@ let test_pad _ =
   assert (str = pad_cycled)
 
 let test_cycle _ =
-  let open Log in
+  let open Secure_log in
   List.iter (fun str ->
       let entry = Cstruct.of_string str in
       let key =
@@ -37,7 +37,7 @@ let test_cycle _ =
 
 
 let test_encrypt_decrypt_once _ =
-  let open Log in
+  let open Secure_log in
   let key =
     Cstruct.of_string "key"
     |> key_of_cstruct
@@ -62,7 +62,7 @@ let test_encrypt_decrypt_once _ =
        *)
 
 let test_enc_dec_list _ =
-  let open Log in
+  let open Secure_log in
   let key =
     Cstruct.of_string "key"
     |> key_of_cstruct
@@ -92,7 +92,7 @@ let test_enc_dec_list _ =
     strs
 
 let test_validate _ =
-  let open Log in
+  let open Secure_log in
   let key =
     Cstruct.of_string "key"
     |> key_of_cstruct

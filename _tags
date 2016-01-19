@@ -1,0 +1,42 @@
+# OASIS_START
+# DO NOT EDIT (digest: f710f47ef8ce31504c54e9ec3ba7dac3)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library secure_log_lib
+"src/secure_log_lib.cmxs": use_secure_log_lib
+<src/*.ml{,i,y}>: pkg_cstruct
+<src/*.ml{,i,y}>: pkg_irmin
+<src/*.ml{,i,y}>: pkg_irmin.unix
+<src/*.ml{,i,y}>: pkg_nocrypto
+<src/*.ml{,i,y}>: pkg_sexplib
+<src/*.ml{,i,y}>: pkg_sexplib.syntax
+# Executable test_log
+"test/test_log.native": pkg_cstruct
+"test/test_log.native": pkg_irmin
+"test/test_log.native": pkg_irmin.unix
+"test/test_log.native": pkg_nocrypto
+"test/test_log.native": pkg_oUnit
+"test/test_log.native": pkg_sexplib
+"test/test_log.native": pkg_sexplib.syntax
+"test/test_log.native": use_secure_log_lib
+<test/*.ml{,i,y}>: pkg_cstruct
+<test/*.ml{,i,y}>: pkg_irmin
+<test/*.ml{,i,y}>: pkg_irmin.unix
+<test/*.ml{,i,y}>: pkg_nocrypto
+<test/*.ml{,i,y}>: pkg_oUnit
+<test/*.ml{,i,y}>: pkg_sexplib
+<test/*.ml{,i,y}>: pkg_sexplib.syntax
+<test/*.ml{,i,y}>: use_secure_log_lib
+# OASIS_STOP

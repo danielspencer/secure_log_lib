@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: f306fa919461c1596dae7822b65ee017)
+version = "0.1"
+description = "A library for tamper resistant logging."
+requires = "nocrypto cstruct sexplib sexplib.syntax irmin.unix irmin"
+archive(byte) = "secure_log_lib.cma"
+archive(byte, plugin) = "secure_log_lib.cma"
+archive(native) = "secure_log_lib.cmxa"
+archive(native, plugin) = "secure_log_lib.cmxs"
+exists_if = "secure_log_lib.cma"
+# OASIS_STOP
+

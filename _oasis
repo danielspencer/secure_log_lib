@@ -12,8 +12,8 @@ Plugins: META (0.4), DevFiles (0.4)
 
 Library "secure_log_lib"
   Path: src
-  Modules: Log
-  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax
+  Modules: Secure_log, Secure_irmin
+  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax, irmin.unix, irmin
 
 Executable "test_log"
   Path: test
@@ -21,6 +21,13 @@ Executable "test_log"
   CompiledObject: native
   Install: false
   BuildDepends: oUnit, secure_log_lib
+
+Executable "test_integration"
+  Path: test
+  MainIs: test_integration.ml
+  CompiledObject: native
+  Install: false
+  BuildDepends: secure_log_lib
 
 Test "test_log"
   TestTools: test_log
