@@ -4,7 +4,6 @@ open Sexplib.Std
 type key = K of Cstruct.t with sexp
 
 let key_of_cstruct v = K v
-
 let cstruct_of_key (K v) = v
 
 type entry_type = Cstruct.t with sexp
@@ -120,12 +119,24 @@ let reconstruct key entries =
 let get_entries log =
   log.entries
 
+let get_key log =
+  log.key
+
 let get_entry log key n =
   let entries = log.entries in
   let len = List.length entries in
   let entry = List.nth entries (len - n - 1) in
   let key' = nth_key key n in
   decrypt entry key'
+
+(* untested, possibly broken *)
+let decrypt_all log key =
+  let entries = List.rev log.entries in
+  List.fold_right
+    (fun entry (key, entries) -> (next_key key, decrypt entry key :: entries))
+    entries
+    (key, [])
+  |> snd
 
 let validate entries =
   let rec loop = function

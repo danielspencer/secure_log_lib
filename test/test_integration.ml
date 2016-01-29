@@ -5,18 +5,7 @@ open Printf
 
 open Irmin_unix
 
-module M = Secure_irmin
-module Test = M.Opaque (Store)
-
-open Lwt
-open Sexplib.Std
-open Printf
-
-open Irmin_unix
-
 module Store = Irmin_git.FS (Irmin.Contents.String) (Irmin.Tag.String) (Irmin.Hash.SHA1)
-
-
 
 let root = "/tmp/irmin/test"
 

@@ -6,6 +6,7 @@ author: "Daniel Spencer <daniel.ds.spencer@gmail.com>"
 homepage: "github.com/danielspencer"
 bug-reports: "github.com/danielspencer"
 license: "Proprietary"
+
 build: [
   ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
@@ -15,9 +16,9 @@ remove: [
   ["ocamlfind" "remove" "secure_log_lib"]
 ]
 depends: [
-"irmin" {<= "0.9.9"}
-"ocamlfind" 
-"nocrypto" 
-"cstruct" 
-"sexplib"
+  "irmin" {<= "0.9.9"}
+  "ocamlfind" 
+  "nocrypto" 
+  "cstruct" 
+  "sexplib"
 ]

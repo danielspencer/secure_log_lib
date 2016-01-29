@@ -27,7 +27,7 @@ Executable "test_integration"
   MainIs: test_integration.ml
   CompiledObject: native
   Install: false
-  BuildDepends: secure_log_lib
+  BuildDepends: secure_log_lib, irmin, irmin.unix
 
 Test "test_log"
   TestTools: test_log
