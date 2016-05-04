@@ -77,7 +77,16 @@ let pad entry ~block_size =
 let unpad entry ~block_size =
   let len = Cstruct.LE.get_uint32 entry 0 |> Int32.to_int in
   let expected_size = padded_size len block_size in
-  assert (expected_size = Cstruct.len entry);
+  if not (expected_size = Cstruct.len entry) then (
+    Printf.printf
+      "Expected %i from len %i and block %i, found %i\n"
+      expected_size
+      len
+      block_size
+      (Cstruct.len entry);
+    Printexc.print_raw_backtrace stdout (Printexc.get_callstack 100);
+    assert false
+  );
   let v = Cstruct.create len in
   Cstruct.blit entry 4 v 0 len;
   v
@@ -90,7 +99,9 @@ let append entry_type entry log =
   in
   let cipher_text =
     (* The initialisation vector isn't relevant due to the key only being used once *)
+    (* TODO: check this assertion *)
     let iv = Cstruct.create (Cipher.block_size) in
+    Cstruct.memset iv 0;
     Cipher.encrypt ~key:encryption_key ~iv (pad entry ~block_size:Cipher.block_size)
   in
   let prev_hash = previous_hash log.entries in
@@ -107,6 +118,7 @@ let decrypt entry key =
     get_data_key key entry.entry_type |> Cipher.of_secret
   in
   let iv = Cstruct.create (Cipher.block_size) in
+  Cstruct.memset iv 0;
   Cipher.decrypt ~key:encryption_key ~iv entry.cipher_text
   |> unpad ~block_size:Cipher.block_size
 
@@ -129,14 +141,14 @@ let get_entry log key n =
   let key' = nth_key key n in
   decrypt entry key'
 
-(* untested, possibly broken *)
 let decrypt_all log key =
   let entries = List.rev log.entries in
-  List.fold_right
-    (fun entry (key, entries) -> (next_key key, decrypt entry key :: entries))
-    entries
+  List.fold_left
+    (fun (key, entries) entry  -> (next_key key, decrypt entry key :: entries))
     (key, [])
+    entries
   |> snd
+  |> List.rev
 
 let validate entries =
   let rec loop = function
