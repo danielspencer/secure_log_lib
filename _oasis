@@ -13,7 +13,7 @@ Plugins: META (0.4), DevFiles (0.4)
 Library "secure_log_lib"
   Path: src
   Modules: Secure_log, Secure_irmin
-  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax, irmin.unix, irmin
+  BuildDepends: nocrypto, cstruct, sexplib, sexplib.syntax, irmin.unix, irmin, bin_prot, bin_prot.syntax
 
 Executable "test_log"
   Path: test

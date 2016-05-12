@@ -1,4 +1,4 @@
-PKG cstruct nocrypto irmin ounit
+PKG cstruct nocrypto irmin
 S src
 S test
 B _build/src

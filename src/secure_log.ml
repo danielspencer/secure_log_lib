@@ -11,7 +11,6 @@ type entry_type = Cstruct.t with sexp
 let hash_algo = `SHA256
 module Cipher = Cipher_block.AES.CBC
 
-(* Cstruct.ts, Cstruct.ts everywhere *)
 type entry =
   { entry_type  : entry_type
   ; cipher_text : Cstruct.t
@@ -27,7 +26,9 @@ type log =
 let previous_hash entries =
   match entries with
   | hd::_ -> hd.hash
-  | [] -> Cstruct.create 20
+  | [] ->
+    let blank = Cstruct.create 20 in
+    Cstruct.memset blank 0; blank
 
 let next_key key =
     Cstruct.append (Cstruct.of_string "Increment Hash") (cstruct_of_key key)
