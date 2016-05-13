@@ -1,20 +1,20 @@
+type view = ([`BC], string list, string) Irmin.t
 
-module Opaque :
-functor
-  (View : Irmin.VIEW with type key = string list and type value = string) ->
+exception Invalid_log
+
+module Client :
   sig
     type t
-    val create   : View.t -> string -> t
-    val append   : t -> Cstruct.t -> unit Lwt.t
-    val validate : t -> unit Lwt.t
+    val create     : view -> string list -> string -> t
+    val initialise : t -> Cstruct.t -> unit Lwt.t
+    val append     : t -> Cstruct.t -> unit Lwt.t
+    val validate   : t -> unit Lwt.t
   end
 
-module Visible :
-functor
-  (View : Irmin.VIEW with type key = string list and type value = string) ->
+module Server :
   sig
     type t
-    val create               : View.t -> string -> t
+    val create               : view -> string list -> string -> t
     val incremental_validate : t -> unit Lwt.t
     val validate_macs        : t -> unit Lwt.t
     val dump_log             : t -> unit Lwt.t

@@ -2,6 +2,10 @@ open Lwt
 open Nocrypto
 open Sexplib.Std
 
+type view = ([`BC], string list, string) Irmin.t
+
+exception Invalid_log
+
 let hash_algo = `SHA256
 module Cipher = Cipher_block.AES.CBC
 
@@ -28,9 +32,22 @@ let next_hash prev_hash cipher_text =
   Cstruct.append prev_hash cipher_text
   |> Hash.digest hash_algo
 
+let get_data_key key =
+  Cstruct.concat
+    [ Cstruct.of_string "Encryption Key"
+    ; key
+    ]
+  |> Hash.digest hash_algo
+  |> Cipher.of_secret
+
 let produce_next prev_hash text ~key =
   let encryption_key =
-    Cipher.of_secret key
+    (*
+    Cstruct.append (Cstruct.of_string "Create key") key
+    |> Hash.digest hash_algo
+    |>
+       *)
+    get_data_key key
   in
   let cipher_text =
     (* The initialisation vector isn't relevant due to the key only being used once *)
@@ -45,23 +62,78 @@ let produce_next prev_hash text ~key =
   let hash_mac = Hash.mac hash_algo ~key hash in
   {cipher_text; hash; hash_mac; prev_hash}
 
-
-module Opaque
-    (View : Irmin.VIEW with type key = string list and type value = string)
+module Shared
+    (Base : sig
+       type t
+       val view : t -> view
+       val prefix : t -> string list
+     end)
 = struct
 
-  type t = { view : View.t ; key_loc : string}
+  let prefix t key = List.append (Base.prefix t) key
 
-  let create view key_loc =
-    { view; key_loc }
+  let key_of_hash t hash =
+    let `Hex name =
+      Hex.of_cstruct hash
+    in
+    prefix t [name]
 
   let head = ["head"]
 
-  let key_of_hash hash =
-    let name =
-      Hex.of_cstruct hash |> Hex.to_string
+  let get_head_ref t =
+    Irmin.read_exn (Base.view t) (prefix t head)
+    >|= fun head_ref ->
+    Sexplib.Sexp.of_string head_ref |> entry_ref_of_sexp
+
+  let read_entry t hash =
+    Irmin.read_exn (Base.view t) (key_of_hash t hash)
+    >|= fun str ->
+    let entry =
+      Sexplib.Sexp.of_string str |> entry_of_sexp
     in
-    [name]
+    if not (Cstruct.equal entry.hash hash) then
+      raise Invalid_log;
+    entry
+
+  let get_entries t =
+    get_head_ref t
+    >>= fun head ->
+    let rec aux ref acc =
+      match ref with
+      | Some hash ->
+        read_entry t hash
+        >>= fun entry ->
+        aux entry.prev_hash (entry::acc)
+      | None -> return acc
+    in
+    aux head []
+
+  let validate t =
+    get_entries t >|= fun entries ->
+    List.iter
+      (fun entry ->
+         let expected_hash = next_hash entry.prev_hash entry.cipher_text in
+         if not (Cstruct.equal expected_hash entry.hash) then
+           raise Invalid_log
+      )
+      entries
+
+end
+
+
+module Client
+= struct
+  type t = { view : view ; prefix : string list ; key_loc : string}
+
+  include Shared
+      (struct
+        type nonrec t = t
+        let view t = t.view
+        let prefix t = t.prefix
+      end)
+
+  let create view prefix key_loc =
+    { view; prefix; key_loc }
 
   let read_key t =
     Lwt_io.with_file
@@ -83,25 +155,25 @@ module Opaque
          in
          Lwt_io.write channel str)
 
-  let write_entry t entry =
-    View.update
+  let write_head t ref =
+    Irmin.update
       t.view
-      (key_of_hash entry.hash)
+      (prefix t head)
+      (sexp_of_entry_ref ref |> Sexplib.Sexp.to_string)
+
+  let initialise t key =
+    write_key t key
+    >>= fun () ->
+    write_head t None
+
+  let write_entry t entry =
+    Irmin.update
+      t.view
+      (key_of_hash t entry.hash)
       (sexp_of_entry entry |> Sexplib.Sexp.to_string)
+    >>= fun () ->
+    write_head t (Some entry.hash)
 
-  let get_head_ref t =
-    View.read_exn t.view head
-    >|= fun head_ref ->
-    Sexplib.Sexp.of_string head_ref |> entry_ref_of_sexp
-
-  let read_entry t hash =
-    View.read_exn t.view (key_of_hash hash)
-    >|= fun str ->
-    let entry =
-      Sexplib.Sexp.of_string str |> entry_of_sexp
-    in
-    assert (Cstruct.equal entry.hash hash);
-    entry
 
   let append t text =
     get_head_ref t
@@ -111,49 +183,32 @@ module Opaque
     let next =
       produce_next head_ref text ~key
     in
-    write_entry t next
-
-  let get_entries t =
-    get_head_ref t
-    >>= fun head ->
-    let rec aux ref acc =
-      match ref with
-      | Some hash ->
-        read_entry t hash
-        >>= fun entry ->
-        aux entry.prev_hash (entry::acc)
-      | None -> return acc
+    let write_progress =
+      write_entry t next
     in
-    aux head []
-
-  let validate t =
-    get_entries t >|= fun entries ->
-    List.iter
-      (fun entry ->
-         let expected_hash = next_hash entry.prev_hash entry.cipher_text in
-         assert (Cstruct.equal expected_hash entry.hash))
-      entries
+    let next_key = next_key key in
+    let key_progress =
+      write_key t next_key
+    in
+    write_progress <&> key_progress
 
 end
 
-module Visible
-    (View : Irmin.VIEW with type key = string list and type value = string)
+module Server
 = struct
+  type t = { view : view ; prefix : string list ; meta_loc : string}
 
-  type t = { view : View.t ; meta_loc : string}
+  include Shared
+      (struct
+        type nonrec t = t
+        let view t = t.view
+        let prefix t = t.prefix
+      end)
 
   type meta = { init_key : Cstruct.t ; last_hash : entry_ref ; next_key : Cstruct.t } with sexp
 
-  let create view meta_loc =
-    { view; meta_loc }
-
-  let head = ["head"]
-
-  let key_of_hash hash =
-    let name =
-      Hex.of_cstruct hash |> Hex.to_string
-    in
-    [name]
+  let create view prefix meta_loc =
+    { view; prefix; meta_loc }
 
   let read_meta t =
     Lwt_io.with_file
@@ -177,42 +232,6 @@ module Visible
            sexp_of_meta meta |> Sexplib.Sexp.to_string
          in
          Lwt_io.write channel str)
-
-  let get_head_ref t =
-    View.read_exn t.view head
-    >|= fun head_ref ->
-    Sexplib.Sexp.of_string head_ref |> entry_ref_of_sexp
-
-  let read_entry t hash =
-    View.read_exn t.view (key_of_hash hash)
-    >|= fun str ->
-    let entry =
-      Sexplib.Sexp.of_string str |> entry_of_sexp
-    in
-    assert (Cstruct.equal entry.hash hash);
-    entry
-
-  let get_entries t =
-    get_head_ref t
-    >>= fun head ->
-    let rec aux ref acc =
-      match ref with
-      | Some hash ->
-        read_entry t hash
-        >>= fun entry ->
-        aux entry.prev_hash (entry::acc)
-      | None -> return acc
-    in
-    aux head []
-
-  let validate t =
-    (* This probably should be removed? *)
-    get_entries t >|= fun entries ->
-    List.iter
-      (fun entry ->
-         let expected_hash = next_hash entry.prev_hash entry.cipher_text in
-         assert (Cstruct.equal expected_hash entry.hash))
-      entries
 
   let option_equal equal opt1 opt2 =
     match opt1, opt2 with
@@ -239,11 +258,13 @@ module Visible
       List.fold_right
         (fun entry key ->
            let expected_hash = next_hash entry.prev_hash entry.cipher_text in
-           assert (Cstruct.equal expected_hash entry.hash);
+           if not (Cstruct.equal expected_hash entry.hash) then
+             raise Invalid_log;
            let expected_mac =
              Hash.mac hash_algo ~key entry.hash
            in
-           assert (Cstruct.equal expected_mac entry.hash_mac);
+           if not (Cstruct.equal expected_mac entry.hash_mac) then
+             raise Invalid_log;
            next_key key)
         entries
         meta.next_key
@@ -256,28 +277,30 @@ module Visible
   let validate_macs t =
     get_entries t >>= fun entries ->
     read_meta t >>= fun meta ->
-    List.fold_right
-      (fun entry key ->
+    List.fold_left
+      (fun key entry ->
          let expected_hash = next_hash entry.prev_hash entry.cipher_text in
-         assert (Cstruct.equal expected_hash entry.hash);
+         if not (Cstruct.equal expected_hash entry.hash) then
+           raise Invalid_log;
          let expected_mac =
            Hash.mac hash_algo ~key entry.hash
          in
-         assert (Cstruct.equal expected_mac entry.hash_mac);
+         if not (Cstruct.equal expected_mac entry.hash_mac) then
+           raise Invalid_log;
          next_key key
       )
-      entries
       meta.init_key
+      entries
     |> ignore;
     return_unit
 
   let dump_log t =
     get_entries t >>= fun entries ->
     read_meta t >>= fun meta ->
-    List.fold_right
-      (fun entry (key,logs) ->
+    List.fold_left
+      (fun (key,logs) entry ->
          let encryption_key =
-           Cipher.of_secret key
+           get_data_key key
          in
          let iv = Cstruct.create (Cipher.block_size) in
          Cstruct.memset iv 0;
@@ -287,8 +310,8 @@ module Visible
          in
          next_key key, str::logs
       )
-      entries
       (meta.init_key,[])
+      entries
     |> snd |> List.rev
     |> List.iteri
       (fun i str -> Printf.printf "%i: %s\n" i (Cstruct.to_string str));

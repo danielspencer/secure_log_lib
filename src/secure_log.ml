@@ -151,13 +151,16 @@ let decrypt_all log key =
   |> snd
   |> List.rev
 
+exception Invalid_log
+
 let validate entries =
   let rec loop = function
     | [] -> ()
     | entry :: tail ->
       let prev = previous_hash tail in
       let expected = next_hash prev entry.cipher_text entry.entry_type in
-      assert (Cstruct.equal expected entry.hash);
+      if not (Cstruct.equal expected entry.hash) then
+        raise Invalid_log;
       loop tail
   in
   loop entries
@@ -168,7 +171,8 @@ let validate_macs log key =
     | [] -> ()
     | entry :: tail ->
       let expected = Hash.mac hash_algo ~key:(cstruct_of_key key) entry.hash in
-      assert (Cstruct.equal entry.hash_mac expected);
+      if not (Cstruct.equal entry.hash_mac expected) then
+        raise Invalid_log;
       loop (next_key key) tail
   in
   loop key (List.rev entries)

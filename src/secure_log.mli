@@ -26,5 +26,7 @@ val get_key : log -> key
 
 val decrypt : entry -> key -> Cstruct.t
 
+exception Invalid_log
+
 val validate : entry list -> unit
 val validate_macs : log -> key -> unit
