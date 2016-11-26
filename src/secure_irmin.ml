@@ -18,6 +18,40 @@ type entry =
   ; hash_mac    : Cstruct.t
   } with sexp
 
+let padded_size len block_size =
+  let internal_len = len + 4 in
+  let padding =
+    if internal_len mod block_size = 0
+    then 0
+    else block_size - (internal_len mod block_size)
+  in
+  internal_len + padding
+
+let pad entry ~block_size =
+  let len = Cstruct.len entry in
+  let external_len = padded_size len block_size in
+  let v = Cstruct.create external_len in
+  Cstruct.LE.set_uint32 v 0 (len |> Int32.of_int);
+  (* [blit src srcoff dst dstoff len] *)
+  Cstruct.blit entry 0 v 4 (Cstruct.len entry);
+  v
+
+let unpad entry ~block_size =
+  let len = Cstruct.LE.get_uint32 entry 0 |> Int32.to_int in
+  let expected_size = padded_size len block_size in
+  if not (expected_size = Cstruct.len entry) then (
+    Printf.printf
+      "Expected %i from len %i and block %i, found %i\n"
+      expected_size
+      len
+      block_size
+      (Cstruct.len entry);
+    Printexc.print_raw_backtrace stdout (Printexc.get_callstack 100);
+    assert false
+  );
+  let v = Cstruct.create len in
+  Cstruct.blit entry 4 v 0 len;
+  v
 let next_key key =
     Cstruct.append (Cstruct.of_string "Increment Hash") key
     |> Hash.digest hash_algo
@@ -54,7 +88,7 @@ let produce_next prev_hash text ~key =
     (* TODO: check this assertion *)
     let iv = Cstruct.create (Cipher.block_size) in
     Cstruct.memset iv 0;
-    Cipher.encrypt ~key:encryption_key ~iv (Secure_log.pad text ~block_size:Cipher.block_size)
+    Cipher.encrypt ~key:encryption_key ~iv (pad text ~block_size:Cipher.block_size)
   in
   let hash =
     next_hash prev_hash cipher_text
@@ -194,6 +228,18 @@ module Client
 
 end
 
+module Intermediary = struct
+  type t = { view : view ; prefix : string list }
+  include Shared
+      (struct
+        type nonrec t = t
+        let view t = t.view
+        let prefix t = t.prefix
+      end)
+
+  let create view prefix = {view; prefix}
+end
+
 module Server
 = struct
   type t = { view : view ; prefix : string list ; meta_loc : string}
@@ -306,7 +352,7 @@ module Server
          Cstruct.memset iv 0;
          let str =
            Cipher.decrypt ~key:encryption_key ~iv entry.cipher_text
-           |> Secure_log.unpad ~block_size:Cipher.block_size
+           |> unpad ~block_size:Cipher.block_size
          in
          next_key key, str::logs
       )

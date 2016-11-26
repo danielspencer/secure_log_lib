@@ -11,6 +11,13 @@ module Client :
     val validate   : t -> unit Lwt.t
   end
 
+module Intermediary :
+  sig
+    type t
+    val create     : view -> string list -> t
+    val validate   : t -> unit Lwt.t
+  end
+
 module Server :
   sig
     type t

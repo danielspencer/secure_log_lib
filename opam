@@ -5,7 +5,7 @@ maintainer: "Daniel Spencer <daniel.ds.spencer@gmail.com>"
 author: "Daniel Spencer <daniel.ds.spencer@gmail.com>"
 homepage: "github.com/danielspencer"
 bug-reports: "github.com/danielspencer"
-license: "Proprietary"
+license: "ISC"
 
 build: [
   ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
